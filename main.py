@@ -1,17 +1,17 @@
 import json
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, url_for
 from flask_cors import cross_origin
 
 from models.posts import Posts, Scores
 
 app = Flask(__name__)
+app.config['REVERSE_PROXY_PATH'] = '/api/get_ticker_data'
 
-
-@app.route('/api/get_ticker_data', methods=['POST'])
+@app.route('/api/get_ticker_data', methods=['GET'])
 @cross_origin()
 def get_ticker():
-    if 'ticker' in request.json:
-        ticker = request.json.get('ticker')
+    if 'ticker' in request.args:
+        ticker = request.args.get('ticker')
         ticker = str(ticker).upper()
         get_ticker_data_from_scores = Scores.query.filter(Scores.stock_ticker == ticker).first()
         if not get_ticker_data_from_scores:
