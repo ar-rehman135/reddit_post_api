@@ -99,7 +99,7 @@ def list_ticker():
     sort_column = request.args.get('sort_column') if request.args.get('sort_column') else "id"
     limit = request.args.get('limit') if request.args.get("limit") else 10
     page_no = request.args.get('page_no') if request.args.get("page_no") else 1
-    search_string = request.args.get('search_string')
+    search = request.args.get('search')
 
     try:
         limit = int(limit)
@@ -127,13 +127,13 @@ def list_ticker():
 
     order_by_column = desc(sort_column) if sort_order == "desc" else asc(sort_column)
 
-    if not search_string:
+    if not search:
         j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker)\
             .order_by(order_by_column).limit(limit).offset((page_no-1)*limit).all()
 
     else:
         j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker) \
-            .filter(Posts.stock_ticker.startswith(search_string))\
+            .filter(Posts.stock_ticker.startswith(search))\
             .order_by(order_by_column).limit(limit).offset((page_no - 1) * limit).all()
 
     count = db_session.query(func.count(Posts.stock_ticker)).scalar()
