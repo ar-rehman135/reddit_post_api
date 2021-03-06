@@ -1,7 +1,32 @@
 import json
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from src.database.db import Base
 
+class Scores(Base):
+    __tablename__ = 'StockScoresPerDay'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stock_ticker = Column(Integer, ForeignKey("Posts.stock_ticker")) # Column(String(350))
+    date = Column(DateTime(350))
+    sub_reddit = Column(String(350))
+    mention = Column(String(350))
+    score = Column(String(350))
+    def __init__(self, stock_ticker = None, date = None, sub_reddit = None, mention =None, score = None):
+        self.stock_ticker = stock_ticker
+        self.date = date
+        self.sub_reddit = sub_reddit
+        self.mention = mention
+        self.score = score
+
+    def __repr__(self):
+        return '<StockScoresPerDay %r>' % (self.stock_ticker)
+
+    def toDict(self):
+        return {
+            "sub_reddit": self.sub_reddit,
+            "mention": self.mention,
+            "score": self.score
+        }
 
 class Posts(Base):
     __tablename__ = 'Posts'
@@ -20,6 +45,8 @@ class Posts(Base):
     week_high = Column(String(350))
     week_low = Column(String(350))
     dateTime = Column(String(350))
+    # score_id = Column(Integer, ForeignKey(Scores.id))
+    scores = relationship(Scores)
     def __init__(self,
             logo=None,
             industry = None,
@@ -55,6 +82,15 @@ class Posts(Base):
         return '<Post %r>' % (self.stock_ticker)
 
     def toDict(self):
+        scores = []
+        for i in self.scores:
+            scores.append({
+                "mention": i.mention,
+                "score": i.score,
+                "sub_reddit": i.sub_reddit,
+                "date": i.date.strftime('%d-%m-%Y'),
+            })
+
         return {
             "logo": self.logo,
             "industry": self.industry,
@@ -66,31 +102,6 @@ class Posts(Base):
             "company_name": self.company_name,
             "stock_ticker": self.stock_ticker,
             "similiar_companies": self.similiar_companies,
-            "dateTime": self.dateTime
-        }
-
-
-class Scores(Base):
-    __tablename__ = 'StockScoresPerDay'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    stock_ticker = Column(String(350))
-    date = Column(DateTime(350))
-    sub_reddit = Column(String(350))
-    mention = Column(String(350))
-    score = Column(String(350))
-    def __init__(self, stock_ticker = None, date = None, sub_reddit = None, mention =None, score = None):
-        self.stock_ticker = stock_ticker
-        self.date = date
-        self.sub_reddit = sub_reddit
-        self.mention = mention
-        self.score = score
-
-    def __repr__(self):
-        return '<StockScoresPerDay %r>' % (self.stock_ticker)
-
-    def toDict(self):
-        return {
-            "sub_reddit": self.sub_reddit,
-            "mention": self.mention,
-            "score": self.score
+            "dateTime": self.dateTime,
+            "scores": scores,
         }

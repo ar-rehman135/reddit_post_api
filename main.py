@@ -128,24 +128,17 @@ def list_ticker():
     order_by_column = desc(sort_column) if sort_order == "desc" else asc(sort_column)
 
     if not search:
-        j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker)\
+        j = Posts.query\
             .order_by(order_by_column).limit(limit).offset((page_no-1)*limit).all()
     else:
-        j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker) \
+        j = Posts.query \
             .filter(Posts.stock_ticker.contains(search))\
             .order_by(order_by_column).limit(limit).offset((page_no - 1) * limit).all()
 
     count = db_session.query(func.count(Posts.stock_ticker)).scalar()
     data = []
-    d1 = {}
-    d2 = {}
     for post in j:
-        if post[0]:
-            d1 = post[0].toDict()
-        if post[1]:
-            d2 = post[1].toDict()
-
-        d3 = dict(d1, **d2)
+        d3 = post.toDict()
         data.append(d3)
 
     return json.dumps({"count": len(data), "total": count, 'data':data})
