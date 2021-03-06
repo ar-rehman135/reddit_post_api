@@ -55,7 +55,19 @@ class Posts(Base):
         return '<Post %r>' % (self.stock_ticker)
 
     def toDict(self):
-        return json.dumps(self)
+        return {
+            "logo": self.logo,
+            "industry": self.industry,
+            "sector": self.sector,
+            "market_cap": self.market_cap,
+            "employees" : self.employees,
+            "url": self.url,
+            "description": self.description,
+            "company_name": self.company_name,
+            "stock_ticker": self.stock_ticker,
+            "similiar_companies": self.similiar_companies,
+            "dateTime": self.dateTime
+        }
 
 
 class Scores(Base):
@@ -77,4 +89,8 @@ class Scores(Base):
         return '<StockScoresPerDay %r>' % (self.stock_ticker)
 
     def toDict(self):
-        return json.dumps(self)
+        return {
+            "sub_reddit": self.sub_reddit,
+            "mention": self.mention,
+            "score": self.score
+        }

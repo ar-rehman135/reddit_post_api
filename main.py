@@ -1,12 +1,12 @@
 import json
 from datetime import datetime
-
-from flask import Flask, request, jsonify, url_for
+from sqlalchemy import desc, asc, func
+from flask import Flask, request
 from flask_cors import cross_origin
 from requests import request as req
 
 from models.posts import Posts, Scores
-
+from src.database.db import db_session
 app = Flask(__name__)
 app.config['REVERSE_PROXY_PATH'] = '/api/get_ticker_data'
 
@@ -87,6 +87,67 @@ def get_ticker():
             "code": "403"
         }
         return json.dumps(err)
+
+@app.route('/api/list_tickers', methods=['GET'])
+@cross_origin()
+def list_ticker():
+
+    #### get args  ######
+    sort_order = request.args.get('sort_order') if request.args.get('sort_order') else "asc"
+    sort_column = request.args.get('sort_column') if request.args.get('sort_column') else "id"
+    limit = request.args.get('limit') if request.args.get("limit") else 10
+    page_no = request.args.get('page_no') if request.args.get("page_no") else 1
+    search_string = request.args.get('search_string')
+
+    try:
+        limit = int(limit)
+    except:
+        return json.dumps({"error": "Invalid Limit"})
+
+    column_names = Posts.__table__.columns.keys()
+    if not sort_column in column_names:
+        column_names = Scores.__table__.columns.keys()
+        if not sort_column in column_names:
+            return json.dumps({
+                "error": "Invalid Sort Column"
+            })
+
+    try:
+        page_no = int(page_no)
+    except:
+        return json.dumps({"error": "Invalid page_no"})
+
+    if not (sort_order == 'asc' or sort_order == "desc"):
+        return json.dumps({
+            "error": "Invalid Sort Order"
+        })
+
+
+    order_by_column = desc(sort_column) if sort_order == "desc" else asc(sort_column)
+
+    if not search_string:
+        j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker)\
+            .order_by(order_by_column).limit(limit).offset((page_no-1)*limit).all()
+
+    else:
+        j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker) \
+            .filter(Posts.stock_ticker.startswith(search_string))\
+            .order_by(order_by_column).limit(limit).offset((page_no - 1) * limit).all()
+
+    count = db_session.query(func.count(Posts.stock_ticker)).scalar()
+    data = []
+    d1 = {}
+    d2 = {}
+    for post in j:
+        if post[0]:
+            d1 = post[0].toDict()
+        if post[1]:
+            d2 = post[1].toDict()
+
+        d3 = dict(d1, **d2)
+        data.append(d3)
+
+    return json.dumps({"count": len(data), "total": count, 'data':data})
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
