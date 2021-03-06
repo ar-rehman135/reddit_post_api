@@ -130,10 +130,9 @@ def list_ticker():
     if not search:
         j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker)\
             .order_by(order_by_column).limit(limit).offset((page_no-1)*limit).all()
-
     else:
         j = db_session.query(Posts, Scores).outerjoin(Scores, Posts.stock_ticker == Scores.stock_ticker) \
-            .filter(Posts.stock_ticker.startswith(search))\
+            .filter(Posts.stock_ticker.contains(search))\
             .order_by(order_by_column).limit(limit).offset((page_no - 1) * limit).all()
 
     count = db_session.query(func.count(Posts.stock_ticker)).scalar()
