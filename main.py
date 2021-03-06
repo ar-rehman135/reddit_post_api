@@ -43,7 +43,9 @@ def get_ticker():
             similiar_companies = get_ticker_data_from_post.similiar_companies
 
             ##### hit polygon api
-
+            volume = ''
+            week_high = ''
+            week_low = ''
             POLYGON_API_KEY = 'YvETvDJe59N6Duvha_iEQPLFepUqsZwR'
             todayDate = datetime.today()
             toDate = todayDate.strftime("%Y-%m-%d")
