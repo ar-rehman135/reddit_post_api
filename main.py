@@ -1,6 +1,9 @@
 import json
+from datetime import datetime
+
 from flask import Flask, request, jsonify, url_for
 from flask_cors import cross_origin
+from requests import request as req
 
 from models.posts import Posts, Scores
 
@@ -39,6 +42,21 @@ def get_ticker():
             company_name = get_ticker_data_from_post.company_name
             similiar_companies = get_ticker_data_from_post.similiar_companies
 
+            ##### hit polygon api
+
+            POLYGON_API_KEY = 'YvETvDJe59N6Duvha_iEQPLFepUqsZwR'
+            todayDate = datetime.today()
+            toDate = todayDate.strftime("%Y-%m-%d")
+            fromDate = str(todayDate.year - 1) + "-" + str(todayDate.month).zfill(2) + "-" + str(todayDate.day).zfill(2)
+            volume_url = "https://api.polygon.io/v2/aggs/ticker/"+ticker+"/range/1/year/"+fromDate+"/"+toDate+"?unadjusted=true&sort=asc&limit=120&apiKey="+POLYGON_API_KEY;
+            print(volume_url)
+            response2 = req(method="GET", url=volume_url)
+            result2 = json.loads(response2.text)
+            if 'results' in result2 and len(result2['results'])>0:
+                volume = result2['results'][0]["v"]
+                week_high = result2['results'][0]["h"]
+                week_low = result2['results'][0]["l"]
+
             data = {
                 "score": score,
                 "mention": mention,
@@ -50,7 +68,10 @@ def get_ticker():
                 "description": description,
                 "company_name": company_name,
                 "similiar_companies": similiar_companies,
-                "industry": industry
+                "industry": industry,
+                "volume": volume,
+                "week_high": week_high,
+                "week_low": week_low
             }
 
             d = json.dumps(data)
