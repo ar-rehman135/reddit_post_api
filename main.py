@@ -23,24 +23,16 @@ def get_ticker():
                 "code": "201"
             }
             return json.dumps(err)
-        get_ticker_data_from_scores = Scores.query.filter(Scores.stock_ticker == ticker).first()
-        if not get_ticker_data_from_scores:
-            score = ''
-            mention = ''
-
-        if get_ticker_data_from_scores:
-            score = get_ticker_data_from_scores.score
-            mention = get_ticker_data_from_scores.mention
+        # get_ticker_data_from_scores = Scores.query.filter(Scores.stock_ticker == ticker).first()
+        # if not get_ticker_data_from_scores:
+        #     score = ''
+        #     mention = ''
+        #
+        # if get_ticker_data_from_scores:
+        #     score = get_ticker_data_from_scores.score
+        #     mention = get_ticker_data_from_scores.mention
         if get_ticker_data_from_post:
-            logo = get_ticker_data_from_post.logo
-            industry = get_ticker_data_from_post.industry
-            sector = get_ticker_data_from_post.sector
-            market_cap = get_ticker_data_from_post.market_cap
-            employees = get_ticker_data_from_post.employees
-            url = get_ticker_data_from_post.url
-            description = get_ticker_data_from_post.description
-            company_name = get_ticker_data_from_post.company_name
-            similiar_companies = get_ticker_data_from_post.similiar_companies
+            d1 = get_ticker_data_from_post.toDict()
 
             ##### hit polygon api
             volume = ''
@@ -59,23 +51,13 @@ def get_ticker():
                 week_high = result2['results'][0]["h"]
                 week_low = result2['results'][0]["l"]
 
-            data = {
-                "score": score,
-                "mention": mention,
-                "logo": logo,
-                "sector": sector,
-                "market_cap": market_cap,
-                "employees": employees,
-                "url": url,
-                "description": description,
-                "company_name": company_name,
-                "similiar_companies": similiar_companies,
-                "industry": industry,
+            d2 = {
                 "volume": volume,
                 "week_high": week_high,
                 "week_low": week_low
             }
 
+            data = {**d1, **d2}
             d = json.dumps(data)
             return d
         err = {
