@@ -83,6 +83,11 @@ def list_ticker():
     page_no = request.args.get('page_no') if request.args.get("page_no") else 1
     search = request.args.get('search')
 
+    if not (sort_order == 'asc' or sort_order == "desc"):
+        return json.dumps({
+            "error": "Invalid Sort Order"
+        })
+
     try:
         limit = int(limit)
     except:
@@ -90,24 +95,24 @@ def list_ticker():
 
     column_names = Posts.__table__.columns.keys()
     if not sort_column in column_names:
-        column_names = Scores.__table__.columns.keys()
-        if not sort_column in column_names:
-            return json.dumps({
-                "error": "Invalid Sort Column"
-            })
+        return json.dumps({
+            "error": "Invalid Sort Column"
+        })
+        # column_names = Scores.__table__.columns.keys()
+
+        # if not sort_column in column_names:
+
+        # else:
+        #     gt = getattr(Scores, sort_column)
+        #     order_by_column = desc(gt) if sort_order == "desc" else asc(gt)
+
+    else:
+        order_by_column = desc(getattr(Posts, sort_column)) if sort_order == "desc" else asc(getattr(Posts, sort_column))
 
     try:
         page_no = int(page_no)
     except:
         return json.dumps({"error": "Invalid page_no"})
-
-    if not (sort_order == 'asc' or sort_order == "desc"):
-        return json.dumps({
-            "error": "Invalid Sort Order"
-        })
-
-
-    order_by_column = desc(sort_column) if sort_order == "desc" else asc(sort_column)
 
     if not search:
         j = Posts.query\
