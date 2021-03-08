@@ -111,12 +111,15 @@ def list_tickers_by_sub_reddit():
     sub_reddit = request.args.get('sub_reddit') if request.args.get('sub_reddit') else 'pennystocks'
     sort_order = request.args.get('sort_order')  if request.args.get('sort_order') else 'asc'
     sort_column = request.args.get('sort_column') if request.args.get('sort_column') else 'id'
+    todayDate = datetime.today()
     date = request.args.get('date')
     if date:
         try:
             date = datetime.strptime(date, "%Y-%m-%d")
         except:
             return error_json("Invalid Date. Date must be in YYYY-mm-dd format")
+    else:
+        date = todayDate.strftime("%y-%m-%d")
     all_sub_reddits = Scores.query.with_entities(Scores.sub_reddit).all()
     all_sub_reddits = [sub_reddit[0] for sub_reddit in all_sub_reddits]
 
@@ -130,14 +133,10 @@ def list_tickers_by_sub_reddit():
         order_by_column = desc(getattr(Scores, sort_column)) if sort_order == "desc" else asc(
             getattr(Scores, sort_column))
 
-    if date:
-        query = db_session.query(Scores, Posts).outerjoin(Posts, Scores.stock_ticker == Posts.stock_ticker) \
-            .filter(and_(Scores.sub_reddit == sub_reddit, func.date(Scores.date) == date))\
-            .order_by(order_by_column).all()
-    else:
-        query = db_session.query(Scores, Posts).outerjoin(Posts, Scores.stock_ticker == Posts.stock_ticker) \
-            .filter(Scores.sub_reddit == sub_reddit) \
-            .order_by(order_by_column).all()
+    query = db_session.query(Scores, Posts).outerjoin(Posts, Scores.stock_ticker == Posts.stock_ticker) \
+        .filter(and_(Scores.sub_reddit == sub_reddit, func.date(Scores.date) == date))\
+        .order_by(order_by_column).all()
+
     data = []
     d1 = {}
     d2 = {}
