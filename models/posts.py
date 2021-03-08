@@ -1,5 +1,5 @@
 import json
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from src.database.db import Base
 
@@ -9,8 +9,8 @@ class Scores(Base):
     stock_ticker = Column(Integer, ForeignKey("Posts.stock_ticker")) # Column(String(350))
     date = Column(DateTime(350))
     sub_reddit = Column(String(350))
-    mention = Column(String(350))
-    score = Column(String(350))
+    mention = Column(Integer)
+    score = Column(Integer)
     def __init__(self, stock_ticker = None, date = None, sub_reddit = None, mention =None, score = None):
         self.stock_ticker = stock_ticker
         self.date = date
@@ -25,7 +25,8 @@ class Scores(Base):
         return {
             "sub_reddit": self.sub_reddit,
             "mention": self.mention,
-            "score": self.score
+            "score": self.score,
+            "date": self.date.strftime('%d-%m-%Y')
         }
 
 class Posts(Base):
@@ -81,7 +82,7 @@ class Posts(Base):
     def __repr__(self):
         return '<Post %r>' % (self.stock_ticker)
 
-    def toDict(self):
+    def toDict(self, score_req):
         scores = []
         for i in self.scores:
             scores.append({
@@ -90,8 +91,8 @@ class Posts(Base):
                 "sub_reddit": i.sub_reddit,
                 "date": i.date.strftime('%d-%m-%Y'),
             })
-
-        return {
+        d2 = {}
+        d1 = {
             "logo": self.logo,
             "industry": self.industry,
             "sector": self.sector,
@@ -102,6 +103,10 @@ class Posts(Base):
             "company_name": self.company_name,
             "stock_ticker": self.stock_ticker,
             "similiar_companies": self.similiar_companies,
-            "dateTime": self.dateTime,
-            "scores": scores,
         }
+        if score_req:
+            d2 = {
+            "scores": scores
+            }
+
+        return dict(d1, **d2)

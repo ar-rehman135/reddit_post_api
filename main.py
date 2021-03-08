@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from sqlalchemy import desc, asc, func
+from sqlalchemy import desc, asc, func, and_
 from flask import Flask, request
 from flask_cors import cross_origin
 from requests import request as req
@@ -10,6 +10,13 @@ from src.database.db import db_session
 app = Flask(__name__)
 app.config['REVERSE_PROXY_PATH'] = '/api/get_ticker_data'
 
+
+def error_json(msg):
+    return json.dumps({
+        "error": msg
+    })
+
+
 @app.route('/api/get_ticker_data', methods=['GET'])
 @cross_origin()
 def get_ticker():
@@ -17,22 +24,9 @@ def get_ticker():
         ticker = request.args.get('ticker')
         ticker = str(ticker).upper()
         get_ticker_data_from_post = Posts.query.filter(Posts.stock_ticker == ticker).first()
-        if not get_ticker_data_from_post:
-            err = {
-                "message": "Invalid Ticker " + ticker,
-                "code": "201"
-            }
-            return json.dumps(err)
-        # get_ticker_data_from_scores = Scores.query.filter(Scores.stock_ticker == ticker).first()
-        # if not get_ticker_data_from_scores:
-        #     score = ''
-        #     mention = ''
-        #
-        # if get_ticker_data_from_scores:
-        #     score = get_ticker_data_from_scores.score
-        #     mention = get_ticker_data_from_scores.mention
+
         if get_ticker_data_from_post:
-            d1 = get_ticker_data_from_post.toDict()
+            d1 = get_ticker_data_from_post.toDict(True)
 
             ##### hit polygon api
             volume = ''
@@ -60,17 +54,10 @@ def get_ticker():
             data = {**d1, **d2}
             d = json.dumps(data)
             return d
-        err = {
-            "message": "Invalid Ticker " + ticker,
-            "code": "201"
-        }
-        return json.dumps(err)
+
+        return error_json("Invalid Ticker " + ticker)
     else:
-        err = {
-            "message": "Invalid Data",
-            "code": "403"
-        }
-        return json.dumps(err)
+        return error_json("Invalid Data")
 
 @app.route('/api/list_tickers', methods=['GET'])
 @cross_origin()
@@ -84,35 +71,23 @@ def list_ticker():
     search = request.args.get('search')
 
     if not (sort_order == 'asc' or sort_order == "desc"):
-        return json.dumps({
-            "error": "Invalid Sort Order"
-        })
+        return error_json("Invalid Sort Order")
 
     try:
         limit = int(limit)
     except:
-        return json.dumps({"error": "Invalid Limit"})
+        return error_json("Invalid Limit")
 
     column_names = Posts.__table__.columns.keys()
     if not sort_column in column_names:
-        return json.dumps({
-            "error": "Invalid Sort Column"
-        })
-        # column_names = Scores.__table__.columns.keys()
-
-        # if not sort_column in column_names:
-
-        # else:
-        #     gt = getattr(Scores, sort_column)
-        #     order_by_column = desc(gt) if sort_order == "desc" else asc(gt)
-
+        return error_json("Invalid Sort Column")
     else:
         order_by_column = desc(getattr(Posts, sort_column)) if sort_order == "desc" else asc(getattr(Posts, sort_column))
 
     try:
         page_no = int(page_no)
     except:
-        return json.dumps({"error": "Invalid page_no"})
+        return error_json("Invalid page_no")
 
     if not search:
         j = Posts.query\
@@ -125,10 +100,56 @@ def list_ticker():
     count = db_session.query(func.count(Posts.stock_ticker)).scalar()
     data = []
     for post in j:
-        d3 = post.toDict()
+        d3 = post.toDict(True)
         data.append(d3)
 
     return json.dumps({"count": len(data), "total": count, 'data':data})
+
+@app.route('/api/list_tickers_by_sub_reddit', methods=['GET'])
+@cross_origin()
+def list_tickers_by_sub_reddit():
+    sub_reddit = request.args.get('sub_reddit') if request.args.get('sub_reddit') else 'pennystocks'
+    sort_order = request.args.get('sort_order')  if request.args.get('sort_order') else 'asc'
+    sort_column = request.args.get('sort_column') if request.args.get('sort_column') else 'id'
+    date = request.args.get('date')
+    if date:
+        try:
+            date = datetime.strptime(date, "%Y-%m-%d")
+        except:
+            return error_json("Invalid Date. Date must be in YYYY-mm-dd format")
+    all_sub_reddits = Scores.query.with_entities(Scores.sub_reddit).all()
+    all_sub_reddits = [sub_reddit[0] for sub_reddit in all_sub_reddits]
+
+    if not sub_reddit in all_sub_reddits:
+        return error_json("Invalid sub_reddit")
+
+    column_names = Scores.__table__.columns.keys()
+    if not sort_column in column_names:
+        return error_json("Invalid Sort Column")
+    else:
+        order_by_column = desc(getattr(Scores, sort_column)) if sort_order == "desc" else asc(
+            getattr(Scores, sort_column))
+
+    if date:
+        query = db_session.query(Scores, Posts).outerjoin(Posts, Scores.stock_ticker == Posts.stock_ticker) \
+            .filter(and_(Scores.sub_reddit == sub_reddit, func.date(Scores.date) == date))\
+            .order_by(order_by_column).all()
+    else:
+        query = db_session.query(Scores, Posts).outerjoin(Posts, Scores.stock_ticker == Posts.stock_ticker) \
+            .filter(Scores.sub_reddit == sub_reddit) \
+            .order_by(order_by_column).all()
+    data = []
+    d1 = {}
+    d2 = {}
+    for post in query:
+        if post[1]:
+            d1 = post[1].toDict(False)
+        if post[0]:
+            d2 = post[0].toDict()
+        d3 = dict(d1, **d2)
+        data.append(d3)
+
+    return json.dumps({"count": len(data), 'data': data})
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
