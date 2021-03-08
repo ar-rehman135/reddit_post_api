@@ -51,7 +51,7 @@ def get_ticker():
                 "week_low": week_low
             }
 
-            data = {**d1, **d2}
+            data = dict(d1, **d2)
             d = json.dumps(data)
             return d
 
